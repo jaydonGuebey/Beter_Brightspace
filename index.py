@@ -21,12 +21,12 @@ driver.get(login_url)
 
 # Wait for the email input and enter the email
 email_input = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.ID, 'i0116')))
-email_input.send_keys('EMAIL - HERE', Keys.RETURN)
+email_input.send_keys('emailhere', Keys.RETURN)
 time.sleep(1)
 
 # Wait for the password input and enter the password
 password_input = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.NAME, 'passwd')))
-password_input.send_keys('PASS - HERE', Keys.RETURN)
+password_input.send_keys('PASS here', Keys.RETURN)
 time.sleep(1)
 
 # Wait for the "Next" button and click it
@@ -49,14 +49,16 @@ assignments = []
 # Extract assignments
 for row in assignment_rows:
     try:
-        title = row.find_element(By.XPATH, './/strong').text.strip()
+        link_element = row.find_element(By.XPATH, './/a[@class="d2l-link d2l-link-inline"]')
+        title = link_element.text.strip()
+        link = link_element.get_attribute('href')  # Extract the link
         due_date_wrapper = row.find_element(By.CLASS_NAME, 'dco.d2l-folderdates-wrapper')
         due_date_element = due_date_wrapper.find_element(By.CLASS_NAME, 'dco.d2l-dates-text')
         due_date_text = due_date_element.text.strip()
 
         if due_date_text:
             due_date = datetime.strptime(due_date_text, 'Due on %b %d, %Y %I:%M %p')
-            assignments.append((title, due_date))
+            assignments.append((title, due_date, link))
 
     except Exception as e:
         print(f"Error extracting assignment: {e}")
@@ -73,15 +75,55 @@ html_content = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Assignments Output</title>
     <style>
-        body { font-family: Arial, sans-serif; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 8px; text-align: left; border: 1px solid #ccc; }
-        th { background-color: #f2f2f2; }
-        .past-due { background-color: #ffcccc; }  /* Light red background for past due dates */
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #f4f4f9;  /* Light background color */
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;  /* Darker title color */
+            text-align: center;
+        }
+        table { 
+            width: 80%; 
+            margin: 0 auto;  /* Center the table */
+            border-collapse: collapse; 
+            background-color: #fff;  /* White background */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);  /* Add shadow to table */
+            border-radius: 8px;  /* Rounded corners */
+            overflow: hidden;
+        }
+        th, td { 
+            padding: 12px 20px; 
+            text-align: left; 
+            border-bottom: 1px solid #ddd; 
+        }
+        th { 
+            background-color: #C6002A;  
+            color: white; 
+            text-transform: uppercase; 
+            letter-spacing: 0.05em; 
+        }
+        tr:nth-child(even) { 
+            background-color: #f2f2f2;  /* Alternating row colors */
+        }
+        .past-due { 
+            background-color: #ffcccc!important;  /* Light red background for past due dates */
+        }
+        a {
+            color: #0073e6;  /* Default link color */
+            text-decoration: none;  /* Remove underline */
+            font-weight: bold;
+        }
+        a:hover {
+            color: #005bb5;  /* Slightly darker blue on hover */
+            text-decoration: underline;  /* Add underline on hover */
+        }
     </style>
 </head>
 <body>
-    <h1>Extracted Assignments</h1>
+    <h1>Assignments</h1>
     <table>
         <tr>
             <th>Assignment Title</th>
@@ -90,11 +132,11 @@ html_content = """
 """
 
 # Add assignment data to the HTML content
-for title, due_date in assignments:
+for title, due_date, link in assignments:
     row_class = 'past-due' if due_date < datetime.now() else ''  # Check if due date is in the past
     html_content += f"""
         <tr class="{row_class}">
-            <td>{title}</td>
+            <td><a href="{link}" target="_blank">{title}</a></td>  <!-- Add the link to the title -->
             <td>{due_date.strftime('%Y-%m-%d %I:%M %p')}</td>
         </tr>
     """
@@ -114,6 +156,3 @@ print(f"HTML file has been generated: {output_file}")
 
 # Automatically open the HTML file in the default web browser
 webbrowser.open(output_file)
-
-# Close the driver
-driver.quit()
